@@ -1,0 +1,522 @@
+<body>
+    <h1>⭐视频展台工具⭐</h1>
+    <select id="txtPort">
+        <option value="COM1">COM1</option>
+        <option value="COM2">COM2</option>
+        <option value="COM3">COM3</option>
+        <option value="COM4">COM4</option>
+        <option value="COM5">COM5</option>
+        <option value="COM6">COM6</option>
+        <option value="COM7">COM7</option>
+        <option value="COM8">COM8</option>
+        <option value="COM9">COM9</option>
+        <option value="COM10">COM10</option>
+    </select>
+    波特率:<input type="text" style="width:50px;" id="txtBaudRate" value="9600" />
+    数据位:<input type="text" style="width:50px;" id="txtDataBits" value="8" />
+    停止位:<input type="text" style="width:50px;" id="txtStopBits" value="1" />
+    校验位:<input type="text" style="width:50px;" id="txtParity" value="0" />
+    <br>
+    <button onclick="testOpen()">打开串口</button>
+    <button onclick="testClose()">关闭串口</button>
+    <!-- <button onclick="recvData()">接收</button>
+    <button onclick="startCyclicRecvData()">循环接收</button>
+    <button onclick="stopCyclicRecvData()">取消循环接收</button> -->
+    <input id="cmd" type="text" placeholder="请输入串口命令">
+    <button onclick="sendData()">发送</button>
+    <div id="funtionList" style="list-style-type: none;"></div>
+</body>
+<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/art-template/4.13.2/lib/template-web.min.js"></script>
+<script id="tpl-funtionList" type="text/html">
+    <% for(var i = 0; i < functionList.length; i++){ %>
+        <div class="module">
+            <div class="headLine"><%= functionList[i].type %></div>
+            <% for(var j = 0; j < functionList[i].childButton.length; j++){ %>
+                <button style="<%= functionList[i].childButton[j].style %>"  onmousedown="sendFunctionList(<%= i %>,<%= j %>)" onmouseup="endFunctionList()"><%= functionList[i].childButton[j].buttonName %></button>
+            <% } %>
+        </div>
+    <% } %>
+</script>
+<script type="text/javascript">
+    var cyclicTimeId;
+    var data = {
+        functionList: [
+            {
+                type: "距离",
+                childButton: [
+                    {
+                        buttonName: "放大",
+                        desc: "变倍加(变倍 + AF)",
+                        orderIndex: 0,
+                        order: ["FC800101007E"]
+                    },
+                    {
+                        buttonName: "缩小",
+                        desc: "表示连续键停止，所有的连续键结束时发送",
+                        orderIndex: 0,
+                        order: ["FC800100007D"]
+                    },
+                    {
+                        buttonName: "远焦",
+                        desc: "焦距减(far) 远焦",
+                        orderIndex: 0,
+                        order: ["FC800200007E"]
+                    },
+                    {
+                        buttonName: "近焦",
+                        desc: "焦距加(Near) 近焦",
+                        orderIndex: 0,
+                        order: ["FC800201007F"]
+                    },
+                    {
+                        buttonName: "自动",
+                        desc: "AF + AE",
+                        orderIndex: 0,
+                        order: ["FC800300007F"]
+                    },
+                ]
+            },
+            {
+                "type": "图像",
+                "childButton": [
+                    {
+                        buttonName: "文本 / 图像 / 动态",
+                        desc: "模式切换",
+                        orderIndex: 0,
+                        order: ["FC801C000098", "FC801C010099", "FC801C02009A"]
+                    },
+                    {
+                        buttonName: "黑白",
+                        desc: "黑白图像模式切换",
+                        orderIndex: 0,
+                        order: ["FC800D01008A", "FC800D000089"]
+                    },
+                    {
+                        buttonName: "图像冻结",
+                        desc: "图像冻结模式切换",
+                        orderIndex: 0,
+                        order: ["FC800C010089", "FC800C000088"]
+                    },
+                    {
+                        buttonName: "图像镜像",
+                        desc: "全关/水平开/垂直开/全开",
+                        orderIndex: 0,
+                        order: ["FC801000008C", "FC801001008D", "FC801002008E", "FC801003008F"]
+                    },
+                    {
+                        buttonName: "图像负片",
+                        desc: "开/关",
+                        orderIndex: 0,
+                        order: ["FC800B000087", "FC800B010088"]
+                    },
+                    {
+                        buttonName: "同屏对比",
+                        desc: "开/关",
+                        orderIndex: 0,
+                        order: ["FC8008000084", "FC8008010085"]
+                    },
+                    {
+                        buttonName: "AWB白平衡",
+                        desc: "开/关",
+                        orderIndex: 0,
+                        order: ["FC8004000080"]
+                    },
+                ]
+            },
+            {
+                "type": "参数",
+                "childButton": [
+                    {
+                        buttonName: "降噪+",
+                        desc: "降噪",
+                        orderIndex: 0,
+                        order: ["FC800907008C", "FC800906008B", "FC800905008A", "FC8009040089", "FC8009030088", "FC8009020087", "FC8009010086"]
+                    },
+                    {
+                        buttonName: "降噪-",
+                        desc: "降噪",
+                        orderIndex: 0,
+                        order: ["FC8009010086", "FC8009020087", "FC8009030088", "FC8009040089", "FC800905008A", "FC800906008B", "FC800907008C"]
+                    },
+                    {
+                        buttonName: "亮度+",
+                        desc: "图像亮度增加",
+                        orderIndex: 0,
+                        order: ["FC800E01008B"]
+                    },
+                    {
+                        buttonName: "亮度-",
+                        desc: "图像亮度减小",
+                        orderIndex: 0,
+                        order: ["FC800E00008A"]
+                    },
+                    {
+                        buttonName: "色度+",
+                        desc: "图像色度增加",
+                        orderIndex: 0,
+                        order: ["FC800F01008C"]
+                    },
+                    {
+                        buttonName: "色度-",
+                        desc: "图像色度减小",
+                        orderIndex: 0,
+                        order: ["FC800F00008B"]
+                    },
+                    {
+                        buttonName: "锐度+",
+                        desc: "锐度加",
+                        orderIndex: 0,
+                        order: ["FC802001009D"]
+                    },
+                    {
+                        buttonName: "锐度-",
+                        desc: "锐度减",
+                        orderIndex: 0,
+                        order: ["FC802000009C"]
+                    },
+                    {
+                        buttonName: "对比度+",
+                        desc: "对比度加",
+                        orderIndex: 0,
+                        order: ["FC802101009E"]
+                    },
+                    {
+                        buttonName: "对比度-",
+                        desc: "对比度减",
+                        orderIndex: 0,
+                        order: ["FC802100009D"]
+                    },
+                    {
+                        buttonName: "红色+",
+                        desc: "红色加",
+                        orderIndex: 0,
+                        order: ["FC8005010082"]
+                    },
+                    {
+                        buttonName: "红色-",
+                        desc: "红色减",
+                        orderIndex: 0,
+                        order: ["FC8005000081"]
+                    },
+                    {
+                        buttonName: "蓝色+",
+                        desc: "蓝色加",
+                        orderIndex: 0,
+                        order: ["FC8006010083"]
+                    },
+                    {
+                        buttonName: "蓝色-",
+                        desc: "蓝色减",
+                        orderIndex: 0,
+                        order: ["FC8006000082"]
+                    },
+                ]
+            },
+            {
+                "type": "存储回放",
+                "childButton": [
+                    {
+                        buttonName: "浏览",
+                        desc: "多画面模式开/关",
+                        orderIndex: 0,
+                        order: ["FC8019010096"]
+                    },
+                    {
+                        buttonName: "退出",
+                        desc: "多画面模式开/关",
+                        orderIndex: 0,
+                        order: ["FC8019000095"]
+                    },
+                    {
+                        buttonName: "拍照",
+                        desc: "多画面模式开/关",
+                        orderIndex: 0,
+                        order: ["FC8018000094"]
+                    },
+                    {
+                        buttonName: "录像",
+                        desc: "多画面模式开/关",
+                        orderIndex: 0,
+                        order: ["FC80A100001D"]
+                    },
+                    {
+                        buttonName: "删除",
+                        desc: "多画面模式开/关",
+                        orderIndex: 0,
+                        order: ["FC801E00009A"]
+                    },
+                    {
+                        buttonName: "删除全部",
+                        desc: "多画面模式开/关",
+                        orderIndex: 0,
+                        order: ["FC801F00009B"]
+                    },
+                ]
+            },
+            {
+                "type": "输出分辩率",
+                "childButton": [
+                    {
+                        buttonName: "自动",
+                        desc: "输出分辩率",
+                        orderIndex: 0,
+                        order: ["FC80530000CF"]
+                    },
+                    {
+                        buttonName: "4K/30Hz",
+                        desc: "输出分辩率",
+                        orderIndex: 0,
+                        order: ["FC80530100D0"]
+                    },
+                    {
+                        buttonName: "1080P/60Hz",
+                        desc: "输出分辩率",
+                        orderIndex: 0,
+                        order: ["FC80530200D1"]
+                    },
+                    {
+                        buttonName: "720P/120Hz",
+                        desc: "输出分辩率",
+                        orderIndex: 0,
+                        order: ["FC80530300D2"]
+                    },
+                    {
+                        buttonName: "720P/60Hz",
+                        desc: "输出分辩率",
+                        orderIndex: 0,
+                        order: ["FC80530400D3"]
+                    },
+                ]
+            },
+            {
+                "type": "录像分辩率",
+                "childButton": [
+                    {
+                        buttonName: "4K",
+                        desc: "录像分辩率",
+                        orderIndex: 0,
+                        order: ["FC80520000CE"]
+                    },
+                    {
+                        buttonName: "1080P",
+                        desc: "录像分辩率",
+                        orderIndex: 0,
+                        order: ["FC80520100CF"]
+                    },
+                    {
+                        buttonName: "720P",
+                        desc: "录像分辩率",
+                        orderIndex: 0,
+                        order: ["FC80520200D0"]
+                    },
+                ]
+            },
+            {
+                "type": "USB设置",
+                "childButton": [
+                    {
+                        buttonName: "USB OFF",
+                        desc: "USB设置",
+                        orderIndex: 0,
+                        order: ["FC80400000BC"]
+                    }, {
+                        buttonName: "USB CAM",
+                        desc: "USB设置",
+                        orderIndex: 0,
+                        order: ["FC80400000BC"]
+                    }, {
+                        buttonName: "USB OTG",
+                        desc: "USB设置",
+                        orderIndex: 0,
+                        order: ["FC80400000BC"]
+                    }, {
+                        buttonName: "TF卡存储",
+                        desc: "USB设置",
+                        orderIndex: 0,
+                        order: ["FC80400000BC"]
+                    }, {
+                        buttonName: "U盘存储",
+                        desc: "USB设置",
+                        orderIndex: 0,
+                        order: ["FC80400000BC"]
+                    },
+                ]
+            },
+            {
+                "type": "菜单",
+                "childButton": [
+                    {
+                        buttonName: "菜单",
+                        desc: "菜单",
+                        orderIndex: 0,
+                        order: ["FC8015000091"]
+                    }, {
+                        buttonName: "OK",
+                        desc: "菜单",
+                        orderIndex: 0,
+                        order: ["FC800300007F"]
+                    }, {
+                        buttonName: "▲",
+                        desc: "菜单",
+                        orderIndex: 0,
+                        order: ["FC800101007E"],
+                        style: "font-weight:bold"
+                    }, {
+                        buttonName: "▼",
+                        desc: "菜单",
+                        orderIndex: 0,
+                        order: ["FC800100007D"],
+                        style: "font-weight:bold"
+                    }, {
+                        buttonName: "◀",
+                        desc: "菜单",
+                        orderIndex: 0,
+                        order: ["FC8016000092"],
+                        style: "font-weight:bold"
+                    }, {
+                        buttonName: "▶",
+                        desc: "菜单",
+                        orderIndex: 0,
+                        order: ["FC8017000093"],
+                        style: "font-weight:bold"
+                    },
+                ]
+            },
+            {
+                "type": "镜头高度校正",
+                "childButton": [
+                    {
+                        buttonName: "38CM",
+                        desc: "高度校正",
+                        orderIndex: 0,
+                        order: ["FC80400000BC"]
+                    },
+                ]
+            },
+        ]
+    };
+
+    (async function () {
+        var html = template("tpl-funtionList", data);
+        console.log(html);
+        document.getElementById('funtionList').innerHTML = html;
+        await CefSharp.BindObjectAsync("serialPortHelper");
+    })();
+
+    function testOpen() {
+        return (async function () {
+
+            var portName = document.getElementById("txtPort").value;
+            var baudRate = parseInt(document.getElementById("txtBaudRate").value);
+            var dataBits = parseInt(document.getElementById("txtDataBits").value);
+            var stopBits = parseInt(document.getElementById("txtStopBits").value);
+            var parity = parseInt(document.getElementById("txtParity").value);
+
+            await serialPortHelper.init(portName, baudRate, dataBits, stopBits, parity);
+
+            await CefSharp.BindObjectAsync("serialPortHelper");
+
+            await serialPortHelper.open();
+        })();
+    }
+
+    function testClose() {
+        console.log('close');
+        (async function () {
+
+            await CefSharp.BindObjectAsync("serialPortHelper");
+
+            await serialPortHelper.close();
+        })();
+    }
+
+    function sendFunctionList(index1, index2) {
+        (async function () {
+            await CefSharp.BindObjectAsync("serialPortHelper");
+            var button = data.functionList[index1].childButton[index2];
+            await serialPortHelper.sendData(button.order[button.orderIndex]);
+            button.orderIndex = (button.orderIndex + 1) % button.order.length;
+        })();
+    }
+
+    function endFunctionList() {
+        (async function () {
+            await CefSharp.BindObjectAsync("serialPortHelper");
+            await serialPortHelper.sendData("FC800000007C");    // 停止命令
+        })();
+    }
+
+    function sendData() {
+        (async function () {
+            var cmdText = document.getElementById("cmd").value;
+            await CefSharp.BindObjectAsync("serialPortHelper");
+            await serialPortHelper.sendData(cmdText);
+        })();
+    }
+
+    function recvData() {
+        (async function () {
+            await CefSharp.BindObjectAsync("serialPortHelper");
+            let recvString = await serialPortHelper.recvData();
+            console.log('[' + recvString + ']');
+        })();
+    }
+
+    function startCyclicRecvData() {
+        cyclicRecvData();
+    }
+
+    function stopCyclicRecvData() {
+        clearTimeout(cyclicTimeId);
+    }
+
+    function cyclicRecvData() {
+        (async function () {
+            await CefSharp.BindObjectAsync("serialPortHelper");
+
+            let recvString = await serialPortHelper.recvData();
+            console.log('-' + recvString + '-');
+            if (recvString.trim() == '11') {
+                console.log('ok');
+                await serialPortHelper.sendData('22');
+            }
+
+            cyclicTimeId = setTimeout("cyclicRecvData()", 1000);
+        })();
+    }
+
+</script>
+<style type="text/css">
+    body {
+        background-color: whitesmoke;
+        width: 800px;
+    }
+
+    p {
+        margin-left: 20px
+    }
+
+    button {
+        margin: 5px;
+        width: 90px;
+        word-wrap: break-word;
+    }
+
+    #funtionList {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .module {
+        width: 210px;
+        border: solid 1px;
+        border-radius: 5px;
+        margin: 5px;
+    }
+
+    .headLine {
+        font-size: 18px;
+        margin: 6px;
+    }
+</style>
